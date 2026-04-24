@@ -47,35 +47,26 @@ static char *read_html(const char *filename) {
 }
 
 static int replace_in_html(char **html, const char *token, const char *value) {
-        unsigned int index = 0;
-        const unsigned int html_length = strlen(*html);
-        const unsigned int buffer_length = html_length;
-        do {
-                char *substring = strstr(*html, token);
-                if (!substring) {
-                        return 0;
-                }
-                index = (uintptr_t) substring - (uintptr_t) *html;
+        const size_t token_len = strlen(token);
+        const size_t value_len = strlen(value);
 
-                if (html_length - strlen(token) + strlen(value) >= buffer_length) {
-                        char *new_html = realloc(*html, buffer_length + strlen(value) + 1);
-                        if (!new_html) {
-                                return -ENOMEM;
-                        }
-                        *html = new_html;
-                }
+        char *substring;
+        while ((substring = strstr(*html, token)) != nullptr) {
+                const size_t current_len = strlen(*html);
+                const size_t index = substring - *html;
+                const size_t new_len = current_len - token_len + value_len;
 
-                const unsigned int tail_index = index + strlen(token);
-                char *buffer_tail = malloc(buffer_length - tail_index);
-                if (!buffer_tail) {
+                char *new_html = realloc(*html, new_len + 1);
+                if (!new_html) {
                         return -ENOMEM;
                 }
-                strcpy(buffer_tail, *html + tail_index);
-                strcpy(*html + index, value);
-                strcpy(*html + strlen(*html), buffer_tail);
+                *html = new_html;
 
-                free(buffer_tail);
-        } while (index < html_length);
+                memmove(*html + index + value_len,
+                        *html + index + token_len,
+                        current_len - index - token_len + 1);
+                memcpy(*html + index, value, value_len);
+        }
 
         return 0;
 }
