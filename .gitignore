@@ -55,3 +55,19 @@ dkms.conf
 *.dwo
 
 */bin
+
+
+# Xcode
+DerivedData/
+build/
+
+# User data
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
