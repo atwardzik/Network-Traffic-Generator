@@ -1,31 +1,31 @@
 
-//PODSTAWOWE BIBLIOTEKI
-//standard input/output - operacje wej/wyj
-//w tym na plikach
+// BASIC LIBRARIES
+// standard input/output - I/O operations
+// including file operations
 #include <stdio.h>
 
-//standard library
-//np zarzadzanie pamiecia dynamiczna
+// standard library
+// e.g., dynamic memory management
 #include <stdlib.h>
 
-//manipulacja ciagami znakow
+// string manipulation
 #include <string.h>
 
-//KOMUNIKACJA SIECIOWA
-//operacja na adresach ip - na postac binarna np.
+// NETWORK COMMUNICATION
+// operations on IP addresses - e.g., conversion to binary form
 #include <arpa/inet.h>
 
-//struktury i funkcje do tworzenia gniazd
+// structures and functions for creating sockets
 #include <sys/socket.h>
 
-//KOMUNIKACJA Z SYS OP
-//unix standard - funkcje systemowe POSIX
+// COMMUNICATION WITH THE OS
+// unix standard - POSIX system functions
 #include <unistd.h>
 
-//informacje o interfejsach sieciowych
+// information about network interfaces
 #include <ifaddrs.h>
 
-//definicje struktur dotyczace intefejsow sieciowych
+// structure definitions regarding network interfaces
 #include <net/if.h>
 
 
@@ -37,18 +37,8 @@ int main(int argc, char *argv[]) {
    
     printf("Program uruchomiony\n");
     
-    //argc - ilosc argumentow, conajmniej 1
-    //argv - tablica napisow
-    
-    for(int i =0; i < argc; i++)
-    {
-        printf("argument nr %d : %s \n", i, argv[i]);
-    }
-    
-   // komunikacja_terminal();
-    
     scanning_menu(argc,  argv);
-    printf("Koniec\n");
+  
     
     return 0;
 }

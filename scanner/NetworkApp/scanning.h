@@ -21,6 +21,8 @@ int is_modbus_active(const char *ip);
 
 void scan_auto_local(void);
 
-void scan_custom_range(const char *start_ip_str, const char *end_ip_str);
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str);
+
+void display_saved_results(const char *filename);
 
 #endif

@@ -1,7 +1,3 @@
-//
-//  scanning.c
-//  NetworkApp
-//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +15,13 @@
 
 // Define the standard Modbus port
 #define MODBUS_PORT 502
+
+// Structure to hold Modbus connection info
+typedef struct {
+    struct in_addr current_addr;
+    int port;
+    char info[20];
+} ModbusConn;
 
 int scanning_menu(int argc, char *argv[])
 {
@@ -43,7 +46,10 @@ int scanning_menu(int argc, char *argv[])
         }
     }
 
-    printf("\nSkanowanie zakończone.\n");
+    printf("\nScanning ended.\n");
+
+    display_saved_results("modbus_results.bin");
+
     return 0;
 }
 
@@ -68,7 +74,6 @@ int verify_is_modbus(int sock) {
     ssize_t bytes_received = recv(sock, response, sizeof(response), 0);
     
     // Valid response starts with our Transaction ID (00 01)
-    // and repeats the Function Code (03) at index 7
     if (bytes_received >= 9 && response[0] == 0x00 && response[1] == 0x01) {
         if (response[7] == 0x03) return 1; // Success!
         if (response[7] == 0x83) return 2; // Modbus Exception - still modbus device
@@ -198,13 +203,14 @@ void scan_auto_local(void) {
     freeifaddrs(ifaddr);
 }
 
-void scan_custom_range(const char *start_ip_str, const char *end_ip_str) {
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str) 
+ {
     struct in_addr start_addr, end_addr;
     
     // Convert strings to binary format
     if (inet_aton(start_ip_str, &start_addr) == 0 || inet_aton(end_ip_str, &end_addr) == 0) {
         printf("Błąd: Nieprawidłowy format adresu IP.\n");
-        return;
+        return 1;
     }
 
     // Convert to host byte order (integer) to allow math/looping
@@ -213,26 +219,65 @@ void scan_custom_range(const char *start_ip_str, const char *end_ip_str) {
 
     printf("\n--- Rozpoczynam weryfikację Modbus: %s - %s ---\n", start_ip_str, end_ip_str);
     
-    for (uint32_t i = start; i <= end; i++) {
-        struct in_addr current_addr;
-        
-        current_addr.s_addr = htonl(i); // Convert back to network byte order
-        char *ip_to_check = inet_ntoa(current_addr);
-        
-      
-        int status = is_modbus_active(ip_to_check);
-        
-        if (status == 1) {
-            printf("MODBUS OK: %-15s \n", ip_to_check);
-        } else if (status == 2) {
-            printf("MODBUS EX: %-15s \n", ip_to_check);
-        }
-        else if (status == 3) {
-            printf("Not MODBUS TCP %-15s \n", ip_to_check);
-        }
-        else{
-            //printf("nic %-15s\n", ip_to_check);
-        }
-     
+    FILE *fptr = fopen("modbus_results.bin", "wb"); 
+    if (fptr == NULL) {
+        perror("File open failed");
+        return 1;
     }
+
+    for (uint32_t i = start; i <= end; i++) {
+        ModbusConn device;
+        device.current_addr.s_addr = htonl(i); //Corrects byte order for storage
+        device.port = MODBUS_PORT;
+
+        char *ip_to_check = inet_ntoa(device.current_addr);
+        int status = is_modbus_active(ip_to_check);
+
+        if (status >= 1 && status <= 3) {
+            // Map status to your info string
+            if (status == 1) strcpy(device.info, "modbus ok");
+            else if (status == 2) strcpy(device.info, "ex");
+            else if (status == 3) strcpy(device.info, "no");
+
+      
+            fwrite(&device, sizeof(ModbusConn), 1, fptr);
+            
+          
+            fflush(fptr); 
+            
+           // printf("Found and Saved: %s (%s)\n", ip_to_check, device.info);
+        }
+    }
+
+    fclose(fptr);
+    return 0;
 }
+
+void display_saved_results(const char *filename) {
+    FILE *fptr = fopen(filename, "rb"); // Open for Reading Binary
+    if (fptr == NULL) {
+        printf("No saved data found in %s.\n", filename);
+        return;
+    }
+
+    ModbusConn temp;
+    char ip_str[INET_ADDRSTRLEN];
+
+    printf("\n--- Saved Modbus Devices ---\n");
+    printf("%-15s | %-5s | %-10s\n", "IP Address", "Port", "Status");
+    printf("------------------------------------------\n");
+
+
+    while (fread(&temp, sizeof(ModbusConn), 1, fptr) == 1) {
+        // binary to string
+        inet_ntop(AF_INET, &temp.current_addr, ip_str, INET_ADDRSTRLEN);
+        
+        printf("%-15s | %-5d | %-10s\n", 
+               ip_str, 
+               temp.port, 
+               temp.info);
+    }
+
+    fclose(fptr);
+}
+
