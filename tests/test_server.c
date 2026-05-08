@@ -4,7 +4,7 @@
 
 #include "unity.h"
 
-#include "server.c"
+#include "backend/src/server.c"
 
 /* Called before each test */
 void setUp(void) {}
