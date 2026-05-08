@@ -55,3 +55,6 @@ dkms.conf
 *.dwo
 
 */bin
+
+.idea
+.vscode
