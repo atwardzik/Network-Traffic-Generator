@@ -108,8 +108,6 @@ struct DirectoryEntry;
 typedef char *caddr_t;
 typedef typeof(void (int)) *sighandler_t;
 
-void exit(int code);
-
 
 /* File syscalls */
 
@@ -175,6 +173,8 @@ int connect(int sockfd, const struct sockaddr *addr, size_t adrlen);
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/errno.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #endif // TARGET_GET_OS
 
@@ -242,6 +242,8 @@ static inline bool isprint(const int c) {
 /*
  * Other
  */
+
+void exit(int code);
 
 void *malloc(size_t size);
 

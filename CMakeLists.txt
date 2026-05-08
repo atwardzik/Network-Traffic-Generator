@@ -8,3 +8,4 @@ project(network_traffic_generator)
 
 add_subdirectory(libc)
 add_subdirectory(backend)
+add_subdirectory(generator)

@@ -1,8 +1,4 @@
-#include "modbus.h"
-
 #include "libc.h"
-#include "socket.h"
-
 
 #define RESET "\033[0m"
 #define BOLD "" /*"\033[1m"*/
@@ -159,7 +155,6 @@ int parse_hex(const char *str, uint8_t *out, const size_t length) {
         int index = 0;
 
         const char *ptr = str;
-        char *endptr;
         while (*ptr) {
                 while (*ptr == ' ') {
                         ptr += 1;
@@ -180,7 +175,7 @@ int parse_hex(const char *str, uint8_t *out, const size_t length) {
         return index;
 }
 
-int test_modbus(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
         if (argc == 1) {
                 printf(BOLD GREEN "Try -h or --help\n");
                 return 0;
@@ -255,10 +250,17 @@ sock_open:
                 dprintf(2, BOLD RED "?? socket error ??" RESET);
                 return 1;
         }
-        struct sockaddr_in source = {AF_INET, 8080};
-        bind(sock, (struct sockaddr *) &source, sizeof(source));
+        struct sockaddr_in remote;
+        memset(&remote, 0, sizeof(remote));
 
-        struct sockaddr_in remote = {AF_INET, cfg.port, {192, 168, 1, 41}};
+        remote.sin_family = AF_INET;
+        remote.sin_port = htons(cfg.port);
+
+        if (inet_pton(AF_INET, cfg.address, &remote.sin_addr) != 1) {
+                dprintf(2, BOLD RED "?? invalid address: %s ??\n" RESET, cfg.address);
+                close(sock);
+                return 1;
+        }
 
         if (connect(sock, (struct sockaddr *) &remote, sizeof(remote)) < 0) {
                 dprintf(2, BOLD RED "?? connect error ??" RESET);
@@ -293,7 +295,7 @@ sock_open:
         size_t total = 0;
 
         while (total < len) {
-                ssize_t n = write(sock, buffer + total, len - total);
+                const ssize_t n = write(sock, buffer + total, len - total);
                 if (n <= 0) {
                         dprintf(2, BOLD RED "?? write error ??" RESET);
                         close(sock);
@@ -302,7 +304,7 @@ sock_open:
                 total += n;
         }
 
-        printf(BOLD GREEN "sent (%zu bytes)\n" RESET, total);
+        printf(BOLD GREEN "sent (%i bytes)\n" RESET, total);
 
         close(sock);
         return 0;
