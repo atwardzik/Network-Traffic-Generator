@@ -1,16 +1,12 @@
 #include "server.h"
+#include "libc.h"
+#include "socket.h"
 
-#include <fcntl.h>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <netinet/in.h>
-#include <sys/errno.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/time.h>
+
+#define EXIT_FAILURE 1
 
 static pthread_mutex_t mut;
 static pthread_cond_t cond;
@@ -109,10 +105,10 @@ static void *manage_connection(void *arg) {
                 goto conn_close;
         }
         replace_server_tokens(&website);
-        int html_length = strlen(website);
+        const int html_length = strlen(website);
 
-        int http_response_length = strlen(http_header) - 2 + snprintf(nullptr, 0, "%u", html_length) +
-                                   strlen(website) + 1;
+        const int http_response_length = strlen(http_header) - 2 + snprintf(nullptr, 0, "%u", html_length) +
+                                         strlen(website) + 1;
 
         char *http_response = malloc(http_response_length);
         if (!http_response) {
