@@ -13,7 +13,7 @@ CXX := clang++
 AS := clang
 LINKER := clang
 
-CC_ARGS = -Iinclude  \
+CC_ARGS = -Iinclude -I../libc \
 	-Wall -Wextra -Wpedantic -Werror \
 	-Wno-unused-variable -Wno-unused-function -Wno-unused-parameter \
 	-std=c23 -c -g -O0
@@ -24,26 +24,19 @@ LINK_ARGS =
 SRCDIR := src
 OBJDIR := obj
 BINDIR := bin
-TESTSRCDIR := tests
-TESTOBJDIR := testobj
 
-SRCS := main.c server.c
+SRCS := main.c modbustcp.c
 OBJS := $(patsubst %.c,$(OBJDIR)/%.o,$(SRCS))
 
-TESTSRCS := $(wildcard $(TESTSRCDIR)/*.c)
-TESTOBJS := $(patsubst $(TESTSRCDIR)/%.c,$(TESTOBJDIR)/%.o,$(TESTSRCS))
-
-
 ### General ###
-all: tests debug
+all: debug
 
 dirs:
 	@mkdir -p $(OBJDIR)
-	@mkdir -p $(TESTOBJDIR)
 	@mkdir -p $(BINDIR)
 
 clean:
-	@rm -rf $(OBJDIR) $(TESTOBJDIR)
+	@rm -rf $(OBJDIR)
 	@rm -f compile_commands.json
 	@rm -f *.o *.elf debug unit_tests
 
@@ -52,13 +45,6 @@ clean:
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | dirs
 	$(CC) $(CC_ARGS) $< -o $@
 
-$(TESTOBJDIR)/%.o: $(TESTSRCDIR)/%.c | dirs
-	$(CC) $(CC_ARGS) -Itests -Isrc -DTESTS -DUNITY_OUTPUT_COLOR -DUNITY_OUTPUT_FILE $< -o $@
-
-
 ### Binaries ###
 debug: $(OBJS)
 	$(LINKER) $(LINK_ARGS) $^ -o $(BINDIR)/debug
-
-tests: $(TESTOBJS)
-	$(CC) $^ -o $(BINDIR)/unit_tests
