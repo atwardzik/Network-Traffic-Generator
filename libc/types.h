@@ -88,4 +88,4 @@ typedef uint32_t uid_t; // Used for user IDs.
 #endif // TARGET_GET_OS
 
 
-#endif //OS_TYPES_H
+#endif // OS_TYPES_H

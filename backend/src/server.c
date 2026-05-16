@@ -1,9 +1,10 @@
 #include "server.h"
+
 #include "libc.h"
 #include "socket.h"
 
-#include <pthread.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <sys/time.h>
 
 #define EXIT_FAILURE 1
@@ -16,9 +17,9 @@ static unsigned int counter;
 constexpr int MAX_ACTIVE_CONNECTIONS = 10;
 
 static const char *http_header = "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: %u\r\n"
-        "Connection: close\r\n\r\n";
+                                 "Content-Type: text/html\r\n"
+                                 "Content-Length: %u\r\n"
+                                 "Connection: close\r\n\r\n";
 
 const char *server_tokens[] = {"${{TIME}}", "${{TEST}}"};
 
@@ -58,9 +59,7 @@ static int replace_in_html(char **html, const char *token, const char *value) {
                 }
                 *html = new_html;
 
-                memmove(*html + index + value_len,
-                        *html + index + token_len,
-                        current_len - index - token_len + 1);
+                memmove(*html + index + value_len, *html + index + token_len, current_len - index - token_len + 1);
                 memcpy(*html + index, value, value_len);
         }
 
@@ -107,8 +106,8 @@ static void *manage_connection(void *arg) {
         replace_server_tokens(&website);
         const int html_length = strlen(website);
 
-        const int http_response_length = strlen(http_header) - 2 + snprintf(nullptr, 0, "%u", html_length) +
-                                         strlen(website) + 1;
+        const int http_response_length =
+                strlen(http_header) - 2 + snprintf(nullptr, 0, "%u", html_length) + strlen(website) + 1;
 
         char *http_response = malloc(http_response_length);
         if (!http_response) {

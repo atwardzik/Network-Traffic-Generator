@@ -11,62 +11,62 @@
 
 #ifdef TARGET_GET_OS
 
-#define O_RDONLY        0x0000
-#define O_WRONLY        0x0001
-#define O_APPEND        0x0008
-#define O_CREAT         0x0200
-#define O_TRUNC         0x0400
-#define O_BINARY        0x10000
-#define O_DIRECTORY     0x200000
+#define O_RDONLY 0x0000
+#define O_WRONLY 0x0001
+#define O_APPEND 0x0008
+#define O_CREAT 0x0200
+#define O_TRUNC 0x0400
+#define O_BINARY 0x10000
+#define O_DIRECTORY 0x200000
 
-#define	S_IFMT          0170000	 /* type of file */
-#define S_IFDIR	        0040000	 /* directory */
-#define	S_IFCHR	        0020000	 /* character special */
-#define	S_IFBLK	        0060000	 /* block special */
-#define	S_IFREG	        0100000	 /* regular */
-#define	S_IFLNK	        0120000	 /* symbolic link */
-#define	S_IFSOCK        0140000 /* socket */
-#define	S_IFIFO	        0010000	 /* fifo */
+#define S_IFMT 0170000   /* type of file */
+#define S_IFDIR 0040000  /* directory */
+#define S_IFCHR 0020000  /* character special */
+#define S_IFBLK 0060000  /* block special */
+#define S_IFREG 0100000  /* regular */
+#define S_IFLNK 0120000  /* symbolic link */
+#define S_IFSOCK 0140000 /* socket */
+#define S_IFIFO 0010000  /* fifo */
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-#define	SIGHUP	1	/* hangup */
-#define	SIGINT	2	/* interrupt */
-#define	SIGQUIT	3	/* quit */
-#define	SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	SIGTRAP	5	/* trace trap (not reset when caught) */
-#define	SIGIOT	6	/* IOT instruction */
-#define	SIGABRT 6	/* used by abort, replace SIGIOT in the future */
-#define	SIGEMT	7	/* EMT instruction */
-#define	SIGFPE	8	/* floating point exception */
-#define	SIGKILL	9	/* kill (cannot be caught or ignored) */
-#define	SIGBUS	10	/* bus error */
-#define	SIGSEGV	11	/* segmentation violation */
-#define	SIGSYS	12	/* bad argument to system call */
-#define	SIGPIPE	13	/* write on a pipe with no one to read it */
-#define	SIGALRM	14	/* alarm clock */
-#define	SIGTERM	15	/* software termination signal from kill */
-#define	SIGURG	16	/* urgent condition on IO channel */
-#define	SIGSTOP	17	/* sendable stop signal not from tty */
-#define	SIGTSTP	18	/* stop signal from tty */
-#define	SIGCONT	19	/* continue a stopped process */
-#define	SIGCHLD	20	/* to parent on child stop or exit */
-#define	SIGCLD	20	/* System V name for SIGCHLD */
-#define	SIGTTIN	21	/* to readers pgrp upon background tty read */
-#define	SIGTTOU	22	/* like TTIN for output if (tp->t_local&LTOSTOP) */
-#define	SIGIO	23	/* input/output possible signal */
-#define	SIGPOLL	SIGIO	/* System V name for SIGIO */
-#define	SIGXCPU	24	/* exceeded CPU time limit */
-#define	SIGXFSZ	25	/* exceeded file size limit */
-#define	SIGVTALRM 26	/* virtual time alarm */
-#define	SIGPROF	27	/* profiling time alarm */
-#define	SIGWINCH 28	/* window changed */
-#define	SIGLOST 29	/* resource lost (eg, record-lock lost) */
-#define	SIGUSR1 30	/* user defined signal 1 */
-#define	SIGUSR2 31	/* user defined signal 2 */
-#define NSIG	32      /* signal 0 implied */
+#define SIGHUP 1      /* hangup */
+#define SIGINT 2      /* interrupt */
+#define SIGQUIT 3     /* quit */
+#define SIGILL 4      /* illegal instruction (not reset when caught) */
+#define SIGTRAP 5     /* trace trap (not reset when caught) */
+#define SIGIOT 6      /* IOT instruction */
+#define SIGABRT 6     /* used by abort, replace SIGIOT in the future */
+#define SIGEMT 7      /* EMT instruction */
+#define SIGFPE 8      /* floating point exception */
+#define SIGKILL 9     /* kill (cannot be caught or ignored) */
+#define SIGBUS 10     /* bus error */
+#define SIGSEGV 11    /* segmentation violation */
+#define SIGSYS 12     /* bad argument to system call */
+#define SIGPIPE 13    /* write on a pipe with no one to read it */
+#define SIGALRM 14    /* alarm clock */
+#define SIGTERM 15    /* software termination signal from kill */
+#define SIGURG 16     /* urgent condition on IO channel */
+#define SIGSTOP 17    /* sendable stop signal not from tty */
+#define SIGTSTP 18    /* stop signal from tty */
+#define SIGCONT 19    /* continue a stopped process */
+#define SIGCHLD 20    /* to parent on child stop or exit */
+#define SIGCLD 20     /* System V name for SIGCHLD */
+#define SIGTTIN 21    /* to readers pgrp upon background tty read */
+#define SIGTTOU 22    /* like TTIN for output if (tp->t_local&LTOSTOP) */
+#define SIGIO 23      /* input/output possible signal */
+#define SIGPOLL SIGIO /* System V name for SIGIO */
+#define SIGXCPU 24    /* exceeded CPU time limit */
+#define SIGXFSZ 25    /* exceeded file size limit */
+#define SIGVTALRM 26  /* virtual time alarm */
+#define SIGPROF 27    /* profiling time alarm */
+#define SIGWINCH 28   /* window changed */
+#define SIGLOST 29    /* resource lost (eg, record-lock lost) */
+#define SIGUSR1 30    /* user defined signal 1 */
+#define SIGUSR2 31    /* user defined signal 2 */
+#define NSIG 32       /* signal 0 implied */
 
 extern int optind;
 extern const char *optarg;
@@ -106,7 +106,7 @@ struct sockaddr {
 
 struct DirectoryEntry;
 typedef char *caddr_t;
-typedef typeof(void (int)) *sighandler_t;
+typedef typeof(void(int)) *sighandler_t;
 
 
 /* File syscalls */
@@ -131,21 +131,11 @@ char *getcwd(char *buf, unsigned int len);
 
 
 /* Process Syscalls */
-pid_t spawnp(
-        void (*process_entry_ptr)(void),
-        const spawn_file_actions_t *file_actions,
-        const spawnattr_t *attrp,
-        char *const argv[],
-        char *const envp[]
-);
+pid_t spawnp(void (*process_entry_ptr)(void), const spawn_file_actions_t *file_actions, const spawnattr_t *attrp,
+             char *const argv[], char *const envp[]);
 
-pid_t spawn(
-        int fd,
-        const spawn_file_actions_t *file_actions,
-        const spawnattr_t *attrp,
-        char *const argv[],
-        char *const envp[]
-);
+pid_t spawn(int fd, const spawn_file_actions_t *file_actions, const spawnattr_t *attrp, char *const argv[],
+            char *const envp[]);
 
 int kill(int pid, int sig);
 
@@ -168,13 +158,13 @@ int accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int connect(int sockfd, const struct sockaddr *addr, size_t adrlen);
 
 #else
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <sys/errno.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #endif // TARGET_GET_OS
 

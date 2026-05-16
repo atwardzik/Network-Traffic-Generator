@@ -43,12 +43,10 @@ int read(int file, void *buf, int len) {
 }
 
 
-void exit(int code) { SYSCALL(EXIT_SVC) }
+void exit(int code){SYSCALL(EXIT_SVC)}
 
-pid_t spawnp(
-        void (*process_entry_ptr)(void), const spawn_file_actions_t *file_actions, const spawnattr_t *attrp,
-        char *const argv[], char *const envp[]
-) {
+pid_t spawnp(void (*process_entry_ptr)(void), const spawn_file_actions_t *file_actions, const spawnattr_t *attrp,
+             char *const argv[], char *const envp[]) {
         int ret;
         SYSCALL(SPAWNP_SVC)
         __asm__("mov    %0, r0\n\r" : "=r"(ret));
@@ -56,10 +54,8 @@ pid_t spawnp(
         return ret;
 }
 
-pid_t spawn(
-        int fd, const spawn_file_actions_t *file_actions, const spawnattr_t *attrp, char *const argv[],
-        char *const envp[]
-) {
+pid_t spawn(int fd, const spawn_file_actions_t *file_actions, const spawnattr_t *attrp, char *const argv[],
+            char *const envp[]) {
         int ret;
         SYSCALL(SPAWN_SVC)
         __asm__("mov    %0, r0\n\r" : "=r"(ret));
@@ -67,7 +63,7 @@ pid_t spawn(
         return ret;
 }
 
-void sigreturn(void) { SYSCALL(SIGRETURN_SVC) }
+void sigreturn(void){SYSCALL(SIGRETURN_SVC)}
 
 sighandler_t signal(int signum, sighandler_t handler) {
         sighandler_t ret;
@@ -277,9 +273,7 @@ char *strtok(char *str, const char *delim) {
         return token_start;
 }
 
-char *strcpy(char *dst, const char *src) {
-        return memcpy(dst, src, strlen(src) + 1);
-}
+char *strcpy(char *dst, const char *src) { return memcpy(dst, src, strlen(src) + 1); }
 
 char *strcat(char *dst, const char *src) {
         char *ptr = dst + strlen(dst);
