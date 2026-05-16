@@ -92,10 +92,12 @@ int verify_is_modbus(int sock) {
 
         // Valid response starts with our Transaction ID (00 01)
         if (bytes_received >= 9 && response[0] == 0x00 && response[1] == 0x01) {
-                if (response[7] == 0x03)
+                if (response[7] == 0x03) {
                         return 1; // Success!
-                if (response[7] == 0x83)
+                }
+                if (response[7] == 0x83) {
                         return 2; // Modbus Exception - still modbus device
+                }
         }
         return 3;
 }
@@ -104,8 +106,9 @@ int is_modbus_active(const char *ip) {
         struct sockaddr_in server;
         struct timeval tv;
         int sock = socket(AF_INET, SOCK_STREAM, 0);
-        if (sock < 0)
+        if (sock < 0) {
                 return 0;
+        }
 
         // set socket to non-blocking mode
         int flags = fcntl(sock, F_GETFL, 0);
@@ -136,10 +139,12 @@ int is_modbus_active(const char *ip) {
                                 int so_error;
                                 socklen_t len = sizeof(so_error);
                                 getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
-                                if (so_error == 0)
+                                if (so_error == 0) {
                                         res = 1; // Success
-                                else
+                                }
+                                else {
                                         res = 0; // Connection failed
+                                }
                         }
                         else {
                                 res = 0; // Timeout or select error
@@ -187,8 +192,9 @@ void scan_auto_local(const char *filename) {
 
         // Iterate through interfaces
         for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-                if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET)
+                if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET) {
                         continue;
+                }
 
                 // Skip loopback and inactive interfaces
                 if (!(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_UP)) {
@@ -255,12 +261,15 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
 
                 if (status >= 1 && status < 3) {
                         // Map status to your info string
-                        if (status == 1)
+                        if (status == 1) {
                                 strcpy(device.info, "modbus ok");
-                        else if (status == 2)
+                        }
+                        else if (status == 2) {
                                 strcpy(device.info, "ex");
-                        else if (status == 3)
+                        }
+                        else if (status == 3) {
                                 strcpy(device.info, "no");
+                        }
 
                         printf("Found: %s | Status: %s\n", ip_to_check, device.info);
 
