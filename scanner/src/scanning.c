@@ -13,67 +13,20 @@ struct ModbusConn {
         char info[20];
 };
 
-int scanning_menu(int argc, char *argv[]) {
-        const char *output_file = DEFAULT_OUT_FILE;
+enum ModbusConnectionResponse {
+        MODBUS_OK,
+        MODBUS_ERR,
+        NOT_A_MODBUS,
 
-        const char *ip_range_start = nullptr;
-        const char *ip_range_end = nullptr;
-        bool auto_scanning = false;
-
-        int c;
-        while ((c = getopt(argc, argv, "o:s:e:ah")) != -1) {
-                switch (c) {
-                        case 'o':
-                                output_file = optarg;
-                                if (!output_file) {
-                                        printf("Error: After -o you must specify the path to the file.\n");
-                                        return 1;
-                                }
-                                break;
-                        case 's':
-                                ip_range_start = optarg;
-                                break;
-                        case 'e':
-                                ip_range_end = optarg;
-                                break;
-                        case 'a':
-                                auto_scanning = true;
-                                break;
-                        case 'h':
-                        default:
-                                printf("=== Modbus Scanner ===\n");
-                                printf("Usage: %s [OPTION] [-o path/to/file.bin]\n", argv[0]);
-                                printf("Options:\n");
-                                printf("  -a                    Automatically scans the local network\n");
-                                printf("  -s <start> -e <end>   Scans a specific IP range\n");
-                                printf("  -o <file>             (Optional) Output path (default: %s)\n",
-                                       DEFAULT_OUT_FILE);
-                                return 0;
-                }
-        }
+        HOST_SOCKET_ERROR,
+        HOST_SELECT_ERROR,
+        HOST_TIMEOUT_ERROR,
+        HOST_IMMEDIATE_ERROR,
+};
 
 
-        if (auto_scanning) {
-                scan_auto_local(output_file);
-        }
-        else if (ip_range_start && ip_range_end) {
-                scan_custom_range(ip_range_start, ip_range_end, output_file);
-        }
-        else {
-                printf("Error: Specify starting and ending IP addresses for the range option.\n");
-                return 1;
-        }
-
-        printf("\nScanning completed. Results saved in: %s\n", output_file);
-        // display_saved_results(output_file);
-
-        return 0;
-}
-
-
-int verify_is_modbus(int sock) {
-        // ping message
-        unsigned char modbus_query[] = {
+static enum ModbusConnectionResponse verify_is_modbus(const int sock) {
+        const unsigned char modbus_ping_query[] = {
                 0x00, 0x01, // Transaction ID
                 0x00, 0x00, // Protocol ID
                 0x00, 0x06, // Length
@@ -84,7 +37,7 @@ int verify_is_modbus(int sock) {
         };
         unsigned char response[12];
 
-        if (write(sock, modbus_query, sizeof(modbus_query)) < 0) {
+        if (write(sock, modbus_ping_query, sizeof(modbus_ping_query)) < 0) {
                 return 0;
         }
 
@@ -93,88 +46,87 @@ int verify_is_modbus(int sock) {
         // Valid response starts with our Transaction ID (00 01)
         if (bytes_received >= 9 && response[0] == 0x00 && response[1] == 0x01) {
                 if (response[7] == 0x03) {
-                        return 1; // Success!
+                        return MODBUS_OK;
                 }
                 if (response[7] == 0x83) {
-                        return 2; // Modbus Exception - still modbus device
+                        return MODBUS_ERR;
                 }
         }
-        return 3;
+
+        return NOT_A_MODBUS;
 }
 
-int is_modbus_active(const char *ip) {
+static enum ModbusConnectionResponse is_modbus_active(const char *ip) {
+        enum ModbusConnectionResponse result = NOT_A_MODBUS;
+
         struct sockaddr_in server;
         struct timeval tv;
-        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        const int sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0) {
-                return 0;
+                return HOST_SOCKET_ERROR;
         }
 
         // set socket to non-blocking mode
-        int flags = fcntl(sock, F_GETFL, 0);
+        const int flags = fcntl(sock, F_GETFL, 0);
         fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
         server.sin_addr.s_addr = inet_addr(ip);
         server.sin_family = AF_INET;
         server.sin_port = htons(MODBUS_PORT);
 
-
-        int res = connect(sock, (struct sockaddr *) &server, sizeof(server));
-
-        if (res < 0) {
-                if (errno == EINPROGRESS) {
-                        // Connection is in progress, wait with select()
-                        fd_set fdset;
-                        FD_ZERO(&fdset);
-                        FD_SET(sock, &fdset);
-
-                        tv.tv_sec = 0;
-                        tv.tv_usec = 500000;
-
-                        // Wait for the socket to become writable (means connection finished)
-                        res = select(sock + 1, NULL, &fdset, NULL, &tv);
-
-                        if (res > 0) {
-                                // Check if there was an actual error during connection
-                                int so_error;
-                                socklen_t len = sizeof(so_error);
-                                getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
-                                if (so_error == 0) {
-                                        res = 1; // Success
-                                }
-                                else {
-                                        res = 0; // Connection failed
-                                }
-                        }
-                        else {
-                                res = 0; // Timeout or select error
-                        }
-                }
-                else {
-                        res = 0; // Immediate error (e.g., Network unreachable)
-                }
+        bool connected = false;
+        int res;
+        if ((res = connect(sock, (struct sockaddr *) &server, sizeof(server))) == 0) {
+                connected = true;
         }
         else {
-                res = 1; // Connected immediately
+                if (errno != EINPROGRESS) {
+                        result = HOST_IMMEDIATE_ERROR;
+                        goto sock_close_and_exit;
+                }
+
+                // Connection is in progress, wait with select()
+                fd_set fdset;
+                FD_ZERO(&fdset);
+                FD_SET(sock, &fdset);
+
+                tv.tv_sec = 0;
+                tv.tv_usec = 500000;
+
+                // Wait for the socket to become writable (means connection finished)
+                res = select(sock + 1, nullptr, &fdset, nullptr, &tv);
+                if (res < 0) {
+                        result = HOST_SELECT_ERROR;
+                        goto sock_close_and_exit;
+                }
+                if (res == 0) {
+                        result = HOST_TIMEOUT_ERROR;
+                        goto sock_close_and_exit;
+                }
+
+                int so_error;
+                socklen_t len = sizeof(so_error);
+                getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+                if (!so_error) {
+                        connected = true;
+                }
         }
 
-        // Verify and Close
-        if (res == 1) {
+        if (connected) {
                 // Return to blocking mode for the actual data exchange
                 fcntl(sock, F_SETFL, flags);
 
-                // Apply timeouts for the Read/Write phase
                 tv.tv_sec = 0;
                 tv.tv_usec = 300000;
                 setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof(tv));
 
-                int result = verify_is_modbus(sock);
-                close(sock);
-                return result;
+                result = verify_is_modbus(sock);
         }
 
+sock_close_and_exit:
         close(sock);
-        return 0;
+
+        return result;
 }
 
 
@@ -198,26 +150,21 @@ void scan_auto_local(const char *filename) {
 
                 // Skip loopback and inactive interfaces
                 if (!(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_UP)) {
-                        // casting
                         struct sockaddr_in *addr = (struct sockaddr_in *) ifa->ifa_addr;
                         struct sockaddr_in *mask = (struct sockaddr_in *) ifa->ifa_netmask;
 
-                        // from network to host
-                        uint32_t ip_val = ntohl(addr->sin_addr.s_addr);
-                        uint32_t mask_val = ntohl(mask->sin_addr.s_addr);
+                        const uint32_t ip_val = ntohl(addr->sin_addr.s_addr);
+                        const uint32_t mask_val = ntohl(mask->sin_addr.s_addr);
 
-                        // Calculate range
                         uint32_t start_ip = (ip_val & mask_val) + 1;
                         uint32_t end_ip = (ip_val | ~mask_val) - 1;
 
                         char start_str[INET_ADDRSTRLEN], end_str[INET_ADDRSTRLEN];
                         struct in_addr s, e;
 
-                        // converting to Network way
                         s.s_addr = htonl(start_ip);
                         e.s_addr = htonl(end_ip);
 
-                        // from binary to text form
                         inet_ntop(AF_INET, &s, start_str, INET_ADDRSTRLEN);
                         inet_ntop(AF_INET, &e, end_str, INET_ADDRSTRLEN);
 
@@ -232,20 +179,18 @@ void scan_auto_local(const char *filename) {
 int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename) {
         struct in_addr start_addr, end_addr;
 
-        // Convert strings to binary format
         if (inet_aton(start_ip_str, &start_addr) == 0 || inet_aton(end_ip_str, &end_addr) == 0) {
                 printf("Error: Invalid IP address format.\n");
                 return 1;
         }
 
-        // Convert to host byte order (integer) to allow math/looping
-        uint32_t start = ntohl(start_addr.s_addr);
-        uint32_t end = ntohl(end_addr.s_addr);
+        const uint32_t start = ntohl(start_addr.s_addr);
+        const uint32_t end = ntohl(end_addr.s_addr);
 
         printf("\n--- Starting Modbus verification:: %s - %s ---\n", start_ip_str, end_ip_str);
 
 
-        int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        const int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
         if (fd < 0) {
                 printf("File open failed");
                 return 1;
@@ -253,31 +198,26 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
 
         for (uint32_t i = start; i <= end; i++) {
                 struct ModbusConn device = {0};
-                device.current_addr.s_addr = htonl(i); // Corrects byte order for storage
+                device.current_addr.s_addr = htonl(i);
                 device.port = MODBUS_PORT;
 
                 char *ip_to_check = inet_ntoa(device.current_addr);
-                int status = is_modbus_active(ip_to_check);
+                const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check);
 
-                if (status >= 1 && status < 3) {
-                        // Map status to your info string
-                        if (status == 1) {
-                                strcpy(device.info, "modbus ok");
-                        }
-                        else if (status == 2) {
-                                strcpy(device.info, "ex");
-                        }
-                        else if (status == 3) {
-                                strcpy(device.info, "no");
-                        }
-
-                        printf("Found: %s | Status: %s\n", ip_to_check, device.info);
-
-                        dprintf(fd, "%s:%i\n", ip_to_check, device.port);
-
-
-                        // printf("Found and Saved: %s (%s)\n", ip_to_check, device.info);
+                if (status == MODBUS_OK) {
+                        strcpy(device.info, "modbus ok");
                 }
+                else if (status == MODBUS_ERR) {
+                        strcpy(device.info, "ex");
+                }
+                else {
+                        strcpy(device.info, "no");
+                        continue;
+                }
+
+                printf("Found: %s | Status: %s\n", ip_to_check, device.info);
+
+                dprintf(fd, "%s:%i\n", ip_to_check, device.port);
         }
 
         close(fd);
@@ -285,7 +225,7 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
 }
 
 void display_saved_results(const char *filename) {
-        int fd = open(filename, O_RDONLY);
+        const int fd = open(filename, O_RDONLY);
         if (fd < 0) {
                 printf("No saved data found in %s.\n", filename);
                 return;
