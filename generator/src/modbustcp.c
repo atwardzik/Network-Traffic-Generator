@@ -175,6 +175,75 @@ int parse_hex(const char *str, uint8_t *out, const size_t length) {
         return index;
 }
 
+int send_modbus(struct config_t *cfg) {
+        // --- SOCKET SETUP ---
+sock_open:
+        const int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0) {
+                dprintf(2, BOLD RED "?? socket error ??" RESET);
+                return 1;
+        }
+        struct sockaddr_in remote;
+        memset(&remote, 0, sizeof(remote));
+
+        remote.sin_family = AF_INET;
+
+        remote.sin_port = htons(cfg->port);
+
+        if (inet_pton(AF_INET, cfg->address, &remote.sin_addr) != 1) {
+                dprintf(2, BOLD RED "?? invalid address: %s ??\n" RESET, cfg->address);
+                close(sock);
+                return 1;
+        }
+
+        if (connect(sock, (struct sockaddr *) &remote, sizeof(remote)) < 0) {
+                dprintf(2, BOLD RED "?? connect error ??" RESET);
+                close(sock);
+                // goto sock_open;
+                return 1;
+        }
+
+
+        // --- SEND DATA ---
+        uint8_t *buffer;
+        int len;
+        uint8_t frame[260];
+
+        uint8_t rawbuf[260];
+
+        if (cfg->rawdata != nullptr) {
+                len = parse_hex(cfg->rawdata, rawbuf, 260);
+
+                if (len < 0) {
+                        dprintf(2, BOLD RED "?? Invalid hex format ??\n" RESET);
+                        return 1;
+                }
+
+                buffer = rawbuf;
+        }
+        else {
+                len = build_frame(cfg, frame);
+                buffer = frame;
+        }
+
+        size_t total = 0;
+
+        while (total < len) {
+                const ssize_t n = write(sock, buffer + total, len - total);
+                if (n <= 0) {
+                        dprintf(2, BOLD RED "?? write error ??" RESET);
+                        close(sock);
+                        return 1;
+                }
+                total += n;
+        }
+
+        printf(BOLD GREEN "sent (%i bytes)\n" RESET, total);
+
+        close(sock);
+}
+
+
 int main(int argc, char *argv[]) {
         if (argc == 1) {
                 printf(BOLD GREEN "Try -h or --help\n");
@@ -188,8 +257,11 @@ int main(int argc, char *argv[]) {
         cfg.timeout = 1000;
         cfg.debug = false;
 
+        char *filename;
+        bool filechosen = false;
+
         int c;
-        while ((c = getopt(argc, argv, "ha:p:u:f:r:c:v:w:t:d")) != -1) {
+        while ((c = getopt(argc, argv, "ha:p:u:f:r:c:v:w:t:F:d")) != -1) {
                 switch (c) {
                         case 'a':
                                 cfg.address = optarg;
@@ -223,8 +295,12 @@ int main(int argc, char *argv[]) {
                                 break;
                         case 'd':
                                 cfg.debug = true;
-                                break;
 
+                                break;
+                        case 'F':
+                                filename = optarg;
+                                filechosen = true;
+                                break;
                         case 'h':
                                 print_help_menu();
                                 exit(0);
@@ -243,69 +319,63 @@ int main(int argc, char *argv[]) {
                 print_debug(&cfg);
         }
 
-        // --- SOCKET SETUP ---
-sock_open:
-        const int sock = socket(AF_INET, SOCK_STREAM, 0);
-        if (sock < 0) {
-                dprintf(2, BOLD RED "?? socket error ??" RESET);
-                return 1;
-        }
-        struct sockaddr_in remote;
-        memset(&remote, 0, sizeof(remote));
+        if (filechosen) {
 
-        remote.sin_family = AF_INET;
-        remote.sin_port = htons(cfg.port);
+                if (filechosen) {
+                        int fd = open(filename, 0); // O_RDONLY
+                        if (fd < 0) {
+                                dprintf(2, "Could not open file %s\n", filename);
+                                return 1;
+                        }
 
-        if (inet_pton(AF_INET, cfg.address, &remote.sin_addr) != 1) {
-                dprintf(2, BOLD RED "?? invalid address: %s ??\n" RESET, cfg.address);
-                close(sock);
-                return 1;
-        }
-
-        if (connect(sock, (struct sockaddr *) &remote, sizeof(remote)) < 0) {
-                dprintf(2, BOLD RED "?? connect error ??" RESET);
-                close(sock);
-                goto sock_open;
-                // return 1;
-        }
+                        char line_buffer[64];
+                        int pos = 0;
+                        char c;
 
 
-        // --- SEND DATA ---
-        uint8_t *buffer;
-        int len;
-        uint8_t frame[260];
+                        while (read(fd, &c, 1) > 0) {
 
-        uint8_t rawbuf[260];
+                                if (c == '\n' || c == '\r' || pos >= sizeof(line_buffer) - 1) {
+                                        if (pos > 0) {
+                                                line_buffer[pos] = '\0';
 
-        if (cfg.rawdata != nullptr) {
-                len = parse_hex(cfg.rawdata, rawbuf, 260);
+                                                char *colonPtr = strchr(line_buffer, ':');
+                                                if (colonPtr != nullptr) {
+                                                        *colonPtr = '\0';
 
-                if (len < 0) {
-                        dprintf(2, BOLD RED "?? Invalid hex format ??\n" RESET);
-                        return 1;
+                                                        cfg.address = line_buffer;
+                                                        cfg.port = (int) strtoul(colonPtr + 1, nullptr, 10);
+
+                                                        printf(BOLD "Sending to: %s:%i\n" RESET, cfg.address, cfg.port);
+                                                        send_modbus(&cfg);
+                                                }
+                                                pos = 0;
+                                        }
+                                }
+                                else {
+                                        line_buffer[pos++] = c;
+                                }
+                        }
+
+                        // if end without enter
+                        if (pos > 0) {
+                                line_buffer[pos] = '\0';
+                                char *colonPtr = strchr(line_buffer, ':');
+                                if (colonPtr != nullptr) {
+                                        *colonPtr = '\0';
+                                        cfg.address = line_buffer;
+                                        cfg.port = (int) strtoul(colonPtr + 1, nullptr, 10);
+                                        send_modbus(&cfg);
+                                }
+                        }
+
+                        close(fd);
                 }
-
-                buffer = rawbuf;
         }
         else {
-                len = build_frame(&cfg, frame);
-                buffer = frame;
+                send_modbus(&cfg);
         }
 
-        size_t total = 0;
 
-        while (total < len) {
-                const ssize_t n = write(sock, buffer + total, len - total);
-                if (n <= 0) {
-                        dprintf(2, BOLD RED "?? write error ??" RESET);
-                        close(sock);
-                        return 1;
-                }
-                total += n;
-        }
-
-        printf(BOLD GREEN "sent (%i bytes)\n" RESET, total);
-
-        close(sock);
         return 0;
 }

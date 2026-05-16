@@ -2,9 +2,8 @@
 // Created by Artur Twardzik on 24/04/2026.
 //
 
-#include "unity.h"
-
 #include "backend/src/server.c"
+#include "unity.h"
 
 /* Called before each test */
 void setUp(void) {}
