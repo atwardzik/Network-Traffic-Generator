@@ -61,3 +61,16 @@ dkms.conf
 
 .idea
 .vscode
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+
+# User data
+*.xcuserstate
+*.xcworkspace
+xcuserdata/
+
+# Swift Package Manager
+.build/

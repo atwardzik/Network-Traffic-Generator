@@ -1,0 +1,19 @@
+//
+//  scanning.h
+//  NetworkApp
+//
+
+#ifndef SCANNING_H
+#define SCANNING_H
+
+#define DEFAULT_OUT_FILE "modbus_results"
+#define MAX_PORTS 10
+int manual_atoi(const char *str);
+
+void scan_auto_local(const char *filename, int port);
+
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename, int port);
+
+void display_saved_results(const char *filename);
+
+#endif

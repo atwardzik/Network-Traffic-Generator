@@ -185,6 +185,8 @@ char *strtok(char *str, const char *delim);
 
 char *strcpy(char *dst, const char *src);
 
+char *strncpy(char *restrict dest, const char *restrict src, size_t count);
+
 char *strcat(char *dst, const char *src);
 
 size_t strlcat(char *restrict dst, const char *restrict src, size_t dstsize);
