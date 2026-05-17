@@ -10,9 +10,9 @@
 #define MAX_PORTS 10
 
 
-void scan_auto_local(const char *filename);
+void scan_auto_local(const char *filename, int port);
 
-int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename);
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename, int port);
 
 void display_saved_results(const char *filename);
 
