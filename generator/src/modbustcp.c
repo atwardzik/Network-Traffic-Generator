@@ -177,7 +177,7 @@ int parse_hex(const char *str, uint8_t *out, const size_t length) {
 
 int send_modbus(struct config_t *cfg) {
         // --- SOCKET SETUP ---
-sock_open:
+        // sock_open:
         const int sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0) {
                 dprintf(2, BOLD RED "?? socket error ??" RESET);
@@ -206,7 +206,7 @@ sock_open:
 
         // --- SEND DATA ---
         uint8_t *buffer;
-        int len;
+        size_t len;
         uint8_t frame[260];
 
         uint8_t rawbuf[260];
@@ -238,9 +238,11 @@ sock_open:
                 total += n;
         }
 
-        printf(BOLD GREEN "sent (%i bytes)\n" RESET, total);
+        printf(BOLD GREEN "sent (%i bytes)\n" RESET, (int) total);
 
         close(sock);
+
+        return 0;
 }
 
 
@@ -320,7 +322,6 @@ int main(int argc, char *argv[]) {
         }
 
         if (filechosen) {
-
                 if (filechosen) {
                         int fd = open(filename, 0); // O_RDONLY
                         if (fd < 0) {
@@ -334,8 +335,7 @@ int main(int argc, char *argv[]) {
 
 
                         while (read(fd, &c, 1) > 0) {
-
-                                if (c == '\n' || c == '\r' || pos >= sizeof(line_buffer) - 1) {
+                                if (c == '\n' || c == '\r' || pos >= (int) sizeof(line_buffer) - 1) {
                                         if (pos > 0) {
                                                 line_buffer[pos] = '\0';
 

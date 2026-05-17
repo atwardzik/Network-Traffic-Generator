@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 23)
 
 project(network_traffic_generator)
 
-add_compile_options(-Wall -Wextra -Werror -Wno-incompatible-library-redeclaration)
+add_compile_options(-Wall -Wextra -Werror -Wno-incompatible-library-redeclaration -Wno-unused-parameter -Wno-unused-label)
 
 add_subdirectory(libc)
 add_subdirectory(backend)
