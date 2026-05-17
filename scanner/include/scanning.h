@@ -8,7 +8,7 @@
 
 #define DEFAULT_OUT_FILE "modbus_results"
 #define MAX_PORTS 10
-
+int manual_atoi(const char *str);
 
 void scan_auto_local(const char *filename, int port);
 
