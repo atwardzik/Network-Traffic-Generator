@@ -5,7 +5,7 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 
-#define MODBUS_PORT 5059
+#define MODBUS_PORT 502
 
 struct ModbusConn {
         struct in_addr current_addr;
@@ -56,7 +56,7 @@ static enum ModbusConnectionResponse verify_is_modbus(const int sock) {
         return NOT_A_MODBUS;
 }
 
-static enum ModbusConnectionResponse is_modbus_active(const char *ip) {
+static enum ModbusConnectionResponse is_modbus_active(const char *ip, int port) {
         enum ModbusConnectionResponse result = NOT_A_MODBUS;
 
         struct sockaddr_in server;
@@ -72,7 +72,7 @@ static enum ModbusConnectionResponse is_modbus_active(const char *ip) {
 
         server.sin_addr.s_addr = inet_addr(ip);
         server.sin_family = AF_INET;
-        server.sin_port = htons(MODBUS_PORT);
+        server.sin_port = htons(port);
 
         bool connected = false;
         int res;
@@ -130,7 +130,7 @@ sock_close_and_exit:
 }
 
 
-void scan_auto_local(const char *filename) {
+void scan_auto_local(const char *filename, int port) {
         struct ifaddrs *ifaddr, *ifa;
 
         int clean_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -169,14 +169,14 @@ void scan_auto_local(const char *filename) {
                         inet_ntop(AF_INET, &e, end_str, INET_ADDRSTRLEN);
 
                         printf("\n>>> Detected interface: %s (%s)\n", ifa->ifa_name, inet_ntoa(addr->sin_addr));
-                        scan_custom_range(start_str, end_str, filename);
+                        scan_custom_range(start_str, end_str, filename, port);
                 }
         }
         freeifaddrs(ifaddr);
 }
 
 
-int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename) {
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename,int port) {
         struct in_addr start_addr, end_addr;
 
         if (inet_aton(start_ip_str, &start_addr) == 0 || inet_aton(end_ip_str, &end_addr) == 0) {
@@ -190,7 +190,7 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
         printf("\n--- Starting Modbus verification:: %s - %s ---\n", start_ip_str, end_ip_str);
 
 
-        const int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) {
                 printf("File open failed");
                 return 1;
@@ -199,10 +199,10 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
         for (uint32_t i = start; i <= end; i++) {
                 struct ModbusConn device = {0};
                 device.current_addr.s_addr = htonl(i);
-                device.port = MODBUS_PORT;
+                device.port = port;
 
                 char *ip_to_check = inet_ntoa(device.current_addr);
-                const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check);
+                const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check, port);
 
                 if (status == MODBUS_OK) {
                         strcpy(device.info, "modbus ok");
@@ -222,6 +222,18 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
 
         close(fd);
         return 0;
+}
+
+int manual_atoi(const char *str) {
+    int res = 0;
+    for (int i = 0; str[i] != '\0'; ++i) {
+        // Sprawdź, czy znak jest cyfrą
+        if (str[i] < '0' || str[i] > '9') {
+            break;
+        }
+        res = res * 10 + (str[i] - '0');
+    }
+    return res;
 }
 
 void display_saved_results(const char *filename) {

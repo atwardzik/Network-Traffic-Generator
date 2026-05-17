@@ -1,6 +1,8 @@
 #include "libc.h"
 #include "scanning.h"
 
+
+
 int main(int argc, char *argv[]) {
         const char *output_file = DEFAULT_OUT_FILE;
 
@@ -8,9 +10,17 @@ int main(int argc, char *argv[]) {
         const char *ip_range_end = nullptr;
         bool auto_scanning = false;
 
+        int port = 502;
         int c;
-        while ((c = getopt(argc, argv, "o:s:e:ah")) != -1) {
+        while ((c = getopt(argc, argv, "o:s:e:ap:h")) != -1) {
                 switch (c) {
+                        case 'p':
+                                port = manual_atoi(optarg);
+                                if (port <= 0 || port > 65535) {
+                                        printf("Błąd: Nieprawidłowy numer portu.\n");
+                                        return 1;
+                                }
+                                break;
                         case 'o':
                                 output_file = optarg;
                                 if (!output_file) {
@@ -32,6 +42,7 @@ int main(int argc, char *argv[]) {
                                 printf("=== Modbus Scanner ===\n");
                                 printf("Usage: %s [OPTION] [-o path/to/file.bin]\n", argv[0]);
                                 printf("Options:\n");
+                                printf("  -p <port>             Port do skanowania (domyślnie: 502)\n");
                                 printf("  -a                    Automatically scans the local network\n");
                                 printf("  -s <start> -e <end>   Scans a specific IP range\n");
                                 printf("  -o <file>             (Optional) Output path (default: %s)\n",
@@ -42,10 +53,10 @@ int main(int argc, char *argv[]) {
 
 
         if (auto_scanning) {
-                scan_auto_local(output_file);
+                scan_auto_local(output_file, port);
         }
         else if (ip_range_start && ip_range_end) {
-                scan_custom_range(ip_range_start, ip_range_end, output_file);
+                scan_custom_range(ip_range_start, ip_range_end, output_file, port);
         }
         else {
                 printf("Error: Specify starting and ending IP addresses for the range option.\n");
