@@ -1,8 +1,3 @@
-//
-//  scanning.h
-//  NetworkApp
-//
-
 #ifndef SCANNING_H
 #define SCANNING_H
 

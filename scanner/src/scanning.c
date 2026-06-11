@@ -17,7 +17,6 @@ enum ModbusConnectionResponse {
         MODBUS_OK,
         MODBUS_ERR,
         NOT_A_MODBUS,
-
         HOST_SOCKET_ERROR,
         HOST_SELECT_ERROR,
         HOST_TIMEOUT_ERROR,
@@ -123,7 +122,7 @@ static enum ModbusConnectionResponse is_modbus_active(const char *ip, int port) 
                 result = verify_is_modbus(sock);
         }
 
-sock_close_and_exit:
+        sock_close_and_exit:
         close(sock);
 
         return result;
@@ -175,6 +174,28 @@ void scan_auto_local(const char *filename, int port) {
         freeifaddrs(ifaddr);
 }
 
+void connection_veryfication( struct ModbusConn * device, int fd)
+{
+        char *ip_to_check = inet_ntoa(device->current_addr);
+        const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check, device->port);
+
+        if (status == MODBUS_OK) {
+                strcpy(device->info, "modbus ok");
+        }
+        else if (status == MODBUS_ERR) {
+                strcpy(device->info, "ex");
+        }
+        else {
+                strcpy(device->info, "no");
+                return;
+        }
+
+        printf("Found: %s | Status: %s\n", inet_ntoa(device->current_addr), device->info);
+        dprintf(fd, "%s:%i\n", inet_ntoa(device->current_addr), device->port);
+}
+                
+
+
 
 int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename,int port) {
         struct in_addr start_addr, end_addr;
@@ -201,23 +222,7 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
                 device.current_addr.s_addr = htonl(i);
                 device.port = port;
 
-                char *ip_to_check = inet_ntoa(device.current_addr);
-                const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check, port);
-
-                if (status == MODBUS_OK) {
-                        strcpy(device.info, "modbus ok");
-                }
-                else if (status == MODBUS_ERR) {
-                        strcpy(device.info, "ex");
-                }
-                else {
-                        strcpy(device.info, "no");
-                        continue;
-                }
-
-                printf("Found: %s | Status: %s\n", ip_to_check, device.info);
-
-                dprintf(fd, "%s:%i\n", ip_to_check, device.port);
+                connection_veryfication(&device, fd);
         }
 
         close(fd);

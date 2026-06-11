@@ -26,6 +26,11 @@ struct config_t {
         bool debug;
 };
 
+//global variables
+struct config_t cfg = {0};
+char *filename;
+bool filechosen = false; 
+
 void print_help_menu(void) {
         printf(BOLD CYAN "\n=== MODBUS TCP CLI TOOL ===\n" RESET);
 
@@ -246,25 +251,9 @@ int send_modbus(struct config_t *cfg) {
 }
 
 
-int main(int argc, char *argv[]) {
-        if (argc == 1) {
-                printf(BOLD GREEN "Try -h or --help\n");
-                return 0;
-        }
-
-        struct config_t cfg = {0};
-        cfg.address = "127.0.0.1";
-        cfg.port = 502;
-        cfg.unit_id = 1;
-        cfg.timeout = 1000;
-        cfg.debug = false;
-
-        char *filename;
-        bool filechosen = false;
-
-        int c;
-        while ((c = getopt(argc, argv, "ha:p:u:f:r:c:v:w:t:F:d")) != -1) {
-                switch (c) {
+void terminal_options(int c)
+{
+        switch (c) {
                         case 'a':
                                 cfg.address = optarg;
                                 break;
@@ -314,6 +303,92 @@ int main(int argc, char *argv[]) {
                         default:
                                 exit(1);
                 }
+}
+
+
+
+void executing_modbus_send(int * pos, char * line_buffer)
+{
+
+       
+       
+        if(*pos <=0)
+        {
+                return;
+        }
+        line_buffer[*pos] = '\0';
+
+        char *colonPtr = strchr(line_buffer, ':');
+        if (colonPtr != nullptr) {
+                *colonPtr = '\0';
+
+              
+                cfg.address = line_buffer;
+                cfg.port = (int) strtoul(colonPtr + 1, nullptr, 10);
+
+                printf(BOLD "Sending to: %s:%i\n" RESET, cfg.address, cfg.port);
+                send_modbus(&cfg);
+
+               
+        }
+        *pos = 0;
+                        
+}
+
+
+int reading_source_f()
+{
+        int fd = open(filename, 0); // O_RDONLY
+        if (fd < 0) {
+                dprintf(2, "Could not open file %s\n", filename);
+                return 1;
+        }
+
+        char line_buffer[64];
+        int pos = 0;
+        char c;
+
+
+        while (read(fd, &c, 1) > 0) {
+                if (c == '\n' || c == '\r' || pos >= (int) sizeof(line_buffer) - 1) {
+                        executing_modbus_send(&pos, line_buffer);
+                }
+                else {
+                        
+                        line_buffer[pos++] = c;
+                     
+                }
+        }
+
+        // if end without enter
+        if (pos > 0) {
+               executing_modbus_send(&pos, line_buffer);
+        }
+
+        close(fd);
+        return 0;
+
+}
+
+int main(int argc, char *argv[]) {
+        if (argc == 1) {
+                printf(BOLD GREEN "Try -h or --help\n");
+                return 0;
+        }
+
+        
+        cfg.address = "127.0.0.1";
+        cfg.port = 502;
+        cfg.unit_id = 1;
+        cfg.timeout = 1000;
+        cfg.debug = false;
+
+        
+        
+
+        int c;
+        while ((c = getopt(argc, argv, "ha:p:u:f:r:c:v:w:t:F:d")) != -1) {
+                terminal_options(c);
         }
 
 
@@ -321,61 +396,11 @@ int main(int argc, char *argv[]) {
                 print_debug(&cfg);
         }
 
-        if (filechosen) {
-                if (filechosen) {
-                        int fd = open(filename, 0); // O_RDONLY
-                        if (fd < 0) {
-                                dprintf(2, "Could not open file %s\n", filename);
-                                return 1;
-                        }
-
-                        char line_buffer[64];
-                        int pos = 0;
-                        char c;
-
-
-                        while (read(fd, &c, 1) > 0) {
-                                if (c == '\n' || c == '\r' || pos >= (int) sizeof(line_buffer) - 1) {
-                                        if (pos > 0) {
-                                                line_buffer[pos] = '\0';
-
-                                                char *colonPtr = strchr(line_buffer, ':');
-                                                if (colonPtr != nullptr) {
-                                                        *colonPtr = '\0';
-
-                                                        cfg.address = line_buffer;
-                                                        cfg.port = (int) strtoul(colonPtr + 1, nullptr, 10);
-
-                                                        printf(BOLD "Sending to: %s:%i\n" RESET, cfg.address, cfg.port);
-                                                        send_modbus(&cfg);
-                                                }
-                                                pos = 0;
-                                        }
-                                }
-                                else {
-                                        line_buffer[pos++] = c;
-                                }
-                        }
-
-                        // if end without enter
-                        if (pos > 0) {
-                                line_buffer[pos] = '\0';
-                                char *colonPtr = strchr(line_buffer, ':');
-                                if (colonPtr != nullptr) {
-                                        *colonPtr = '\0';
-                                        cfg.address = line_buffer;
-                                        cfg.port = (int) strtoul(colonPtr + 1, nullptr, 10);
-                                        send_modbus(&cfg);
-                                }
-                        }
-
-                        close(fd);
-                }
-        }
-        else {
+        if(!filechosen)
+        {
                 send_modbus(&cfg);
+                return 0;
         }
-
-
-        return 0;
+        
+       return reading_source_f();
 }
