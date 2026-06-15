@@ -21,6 +21,7 @@ enum ModbusConnectionResponse {
         HOST_SELECT_ERROR,
         HOST_TIMEOUT_ERROR,
         HOST_IMMEDIATE_ERROR,
+        HOST_UNREACHABLE,
 };
 
 
@@ -37,7 +38,7 @@ static enum ModbusConnectionResponse verify_is_modbus(const int sock) {
         unsigned char response[12];
 
         if (write(sock, modbus_ping_query, sizeof(modbus_ping_query)) < 0) {
-                return 0;
+                return HOST_UNREACHABLE;
         }
 
         const ssize_t bytes_received = read(sock, response, sizeof(response));
@@ -122,7 +123,7 @@ static enum ModbusConnectionResponse is_modbus_active(const char *ip, int port) 
                 result = verify_is_modbus(sock);
         }
 
-        sock_close_and_exit:
+sock_close_and_exit:
         close(sock);
 
         return result;
@@ -132,7 +133,7 @@ static enum ModbusConnectionResponse is_modbus_active(const char *ip, int port) 
 void scan_auto_local(const char *filename, int port) {
         struct ifaddrs *ifaddr, *ifa;
 
-        int clean_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        const int clean_fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         close(clean_fd);
 
         // there are any intefaces
@@ -174,9 +175,8 @@ void scan_auto_local(const char *filename, int port) {
         freeifaddrs(ifaddr);
 }
 
-void connection_veryfication( struct ModbusConn * device, int fd)
-{
-        char *ip_to_check = inet_ntoa(device->current_addr);
+void connection_veryfication(struct ModbusConn *device, int fd) {
+        const char *ip_to_check = inet_ntoa(device->current_addr);
         const enum ModbusConnectionResponse status = is_modbus_active(ip_to_check, device->port);
 
         if (status == MODBUS_OK) {
@@ -193,11 +193,9 @@ void connection_veryfication( struct ModbusConn * device, int fd)
         printf("Found: %s | Status: %s\n", inet_ntoa(device->current_addr), device->info);
         dprintf(fd, "%s:%i\n", inet_ntoa(device->current_addr), device->port);
 }
-                
 
 
-
-int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename,int port) {
+int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const char *filename, int port) {
         struct in_addr start_addr, end_addr;
 
         if (inet_aton(start_ip_str, &start_addr) == 0 || inet_aton(end_ip_str, &end_addr) == 0) {
@@ -227,18 +225,6 @@ int scan_custom_range(const char *start_ip_str, const char *end_ip_str, const ch
 
         close(fd);
         return 0;
-}
-
-int manual_atoi(const char *str) {
-    int res = 0;
-    for (int i = 0; str[i] != '\0'; ++i) {
-        // Sprawdź, czy znak jest cyfrą
-        if (str[i] < '0' || str[i] > '9') {
-            break;
-        }
-        res = res * 10 + (str[i] - '0');
-    }
-    return res;
 }
 
 void display_saved_results(const char *filename) {
