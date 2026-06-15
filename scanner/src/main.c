@@ -2,20 +2,21 @@
 #include "scanning.h"
 
 
+// global variables
+
 
 int main(int argc, char *argv[]) {
         const char *output_file = DEFAULT_OUT_FILE;
-
         const char *ip_range_start = nullptr;
         const char *ip_range_end = nullptr;
         bool auto_scanning = false;
-
         int port = 502;
+
         int c;
         while ((c = getopt(argc, argv, "o:s:e:ap:h")) != -1) {
                 switch (c) {
                         case 'p':
-                                port = manual_atoi(optarg);
+                                port = (uint16_t) strtoul(optarg, nullptr, 10);
                                 if (port <= 0 || port > 65535) {
                                         printf("Błąd: Nieprawidłowy numer portu.\n");
                                         return 1;
